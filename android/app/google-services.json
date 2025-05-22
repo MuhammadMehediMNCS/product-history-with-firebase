@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "385835835489",
+    "project_id": "all-product-79dcd",
+    "storage_bucket": "all-product-79dcd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:385835835489:android:df6a231fa18822d6088a20",
+        "android_client_info": {
+          "package_name": "com.mehedi.my_product"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCTApJ_w2J9UCW0Wr7_nuhAd2NSjrJNszk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
