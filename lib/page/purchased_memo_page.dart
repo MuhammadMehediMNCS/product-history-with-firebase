@@ -112,6 +112,7 @@ class _PurchasedMemoPageState extends State<PurchasedMemoPage> {
                               pw.Text('মোবাইল : ${productController.sallerAddress.value.date ?? "................"}', style: pw.TextStyle(font: font)),
                             ],
                           ),
+                          // ignore: deprecated_member_use
                           pw.Table.fromTextArray(
                             headers: ['পণ্যের বিবরণ', 'সাইজ', 'অর্ডার', 'নতুন', 'বাঁকি', 'টাকা'],
                             data: productController.purchasedMemoList.map((product) {

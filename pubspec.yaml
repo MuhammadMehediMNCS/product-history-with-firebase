@@ -39,9 +39,10 @@ dependencies:
   fluttertoast: 
   math_expressions: 
   intl: 
-  intl_phone_field: 
   firebase_core: 
+  firebase_auth: 
   cloud_firestore: 
+  intl_phone_field: 
   pdf: 
   path_provider: 
   permission_handler: 

@@ -112,6 +112,7 @@ class _SaleMemoPageState extends State<SaleMemoPage> {
                               pw.Text('মোবাইল : ${controller.sallerAddress.value.date ?? "................"}', style: pw.TextStyle(font: font)),
                             ],
                           ),
+                          // ignore: deprecated_member_use
                           pw.Table.fromTextArray(
                             headers: ['বিবরণ', 'সাইজ', 'পরিমাণ', 'দর', 'হার %', 'টাকা'],
                             data: controller.saleMemoList.map((product) {

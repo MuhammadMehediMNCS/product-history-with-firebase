@@ -1,16 +1,17 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:my_product/controller/product_controller.dart';
 import 'package:my_product/firebase_options.dart';
-import 'package:my_product/page/calculator_page.dart';
-import 'package:my_product/page/otp_page.dart';
-import 'package:my_product/page/product_page.dart';
+import 'package:my_product/page/forgot_otp_page.dart';
+import 'package:my_product/page/home_page.dart';
+import 'package:my_product/page/phone_verify_otp_page.dart';
 import 'package:my_product/widget/button_widget.dart';
 import 'package:my_product/widget/text_field_widget.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,9 +98,8 @@ class _AuthPageState extends State<AuthPage> {
                   borderSide: const BorderSide(color: Colors.pink)
                 ),
               ),
-              initialCountryCode: 'BD', // You can set 'IN', 'US', etc. as needed
+              initialCountryCode: 'BD',
               onChanged: (phone) {
-              print(phone.completeNumber); // Full number with country code
               phoneController.text = phone.completeNumber; // Store it if needed
               },
             ),
@@ -107,7 +107,17 @@ class _AuthPageState extends State<AuthPage> {
               alignment: Alignment.centerRight,
               child: MaterialButton(
                 onPressed: () {
-                  Get.to(OtpPage());
+                  String phoneNumber = phoneController.text.trim();
+
+                  if (phoneNumber.isEmpty) {
+                    Get.snackbar(
+                      'ত্রুটি', 'একাউন্ট নাম্বার ঘরটি পূরণ করুন',
+                      backgroundColor: Colors.pink,
+                      colorText: Colors.white
+                    );
+                  } else {
+                    Get.to(ForgotOtpPage(phoneNumber: phoneNumber));
+                  }
                 },
                 child: RichText(
                   text: TextSpan(
@@ -121,99 +131,85 @@ class _AuthPageState extends State<AuthPage> {
               title: 'পিন নাম্বার',
               controller: passwordController,
               keyboard: TextInputType.number,
+              isPassword: true,
             ),
             SizedBox(height: 48.0),
             ButtonWidget(
               title: 'পরবর্তী',
-              onPressed: () {}
+              onPressed: () async {
+                String phoneNumber = phoneController.text.trim();
+                String pin = passwordController.text.trim();
+
+                if (phoneNumber.isEmpty || pin.isEmpty) {
+                  Get.snackbar(
+                    'ত্রুটি', 'ফোন নাম্বার ও পিন দিন',
+                    backgroundColor: Colors.pink,
+                    colorText: Colors.white,
+                  );
+                  return;
+                }
+
+                // Check if user already exists with this phone number
+                final QuerySnapshot snapshot = await FirebaseFirestore.instance
+                    .collection('users')
+                    .where('phone', isEqualTo: phoneNumber)
+                    .get();
+
+                if (snapshot.docs.isNotEmpty) {
+                  final storedPin = snapshot.docs.first['pin'];
+
+                  if (storedPin == pin) {
+                    Get.to(HomePage());
+                  } else {
+                    Get.snackbar(
+                      'ভুল পিন', 'সঠিক পিন দিন',
+                      backgroundColor: Colors.pink,
+                      colorText: Colors.white,
+                    );
+                  }
+                } else {
+                  // New user, go through phone verification
+                  await FirebaseAuth.instance.verifyPhoneNumber(
+                    phoneNumber: phoneNumber,
+                    verificationCompleted: (PhoneAuthCredential credential) async {
+                      await FirebaseAuth.instance.signInWithCredential(credential);
+                      await savePIN(pin);
+                      Get.to(HomePage());
+                    },
+                    verificationFailed: (FirebaseAuthException e) {
+                      Get.snackbar(
+                        'ভুল', e.message ?? 'অজানা ত্রুটি',
+                        backgroundColor: Colors.pink,
+                        colorText: Colors.white,
+                      );
+                    },
+                    codeSent: (String verificationId, int? resendToken) {
+                      Get.to(() => PhoneVerifyOtpPage(
+                        verificationId: verificationId,
+                        pin: pin,
+                      ));
+                    },
+                    codeAutoRetrievalTimeout: (String verificationId) {},
+                  );
+                }
+              }
             )
           ],
         ),
       ),
     );
   }
-}
 
-class HomePage extends StatefulWidget {
-  const HomePage({super.key});
-
-  @override
-  State<HomePage> createState() => _HomePageState();
-}
-
-class _HomePageState extends State<HomePage> {
-  int selectedindex = 0;
-
-  final List<Widget> pages = [
-    const ProductPage(),
-    const CalculatorPage()
-  ];
-
-  DateTime? doublePressed;
-
-  Future<bool> onWillPop() async {
-    DateTime currentTime = DateTime.now();
-
-    bool backHandeler = doublePressed == null || currentTime.difference(doublePressed!) > const Duration(seconds: 3);
-
-    if (backHandeler) {
-      doublePressed = currentTime;
-      Fluttertoast.showToast(
-        msg: "Double press back to leave the app.",
-        backgroundColor: Colors.pink,
-        textColor: Colors.white,
-        gravity: ToastGravity.CENTER
-      );
-
-      return false;
+  Future<void> savePIN(String pin) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .set({
+          'phone': user.phoneNumber,
+          'pin': pin,
+        }, SetOptions(merge: true));
     }
-    
-    return true;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // ignore: deprecated_member_use
-    return WillPopScope(
-      onWillPop: onWillPop,
-      child: Scaffold(
-        body: pages[selectedindex],
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: selectedindex,
-          onTap: (index) {
-            setState(() {
-              selectedindex = index;
-            });
-          },
-          backgroundColor: Colors.pink,
-          selectedItemColor: Colors.white,
-          unselectedItemColor: Colors.grey,
-          selectedIconTheme: const IconThemeData(color: Colors.white),
-          unselectedIconTheme: const IconThemeData(color: Colors.grey),
-          items: [
-            BottomNavigationBarItem(
-              icon: ColorFiltered(
-                colorFilter: ColorFilter.mode(
-                  selectedindex == 0 ? Colors.white : Colors.grey,
-                  BlendMode.srcIn,
-                ),
-                child: Image.asset('images/product.png', height: 24.0, width: 24.0),
-              ),
-              label: 'পণ্যের তথ্য',
-            ),
-            BottomNavigationBarItem(
-              icon: ColorFiltered(
-                colorFilter: ColorFilter.mode(
-                  selectedindex == 1 ? Colors.white : Colors.grey,
-                  BlendMode.srcIn,
-                ),
-                child: Image.asset('images/calculator.png', height: 24.0, width: 24.0),
-              ),
-              label: 'ক্যালকুলেটর',
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

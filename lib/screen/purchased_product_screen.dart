@@ -95,6 +95,7 @@ class _PurchasedProductScreenState extends State<PurchasedProductScreen> {
       dateTime: DateTime.now()
     );
 
+    // ignore: use_build_context_synchronously
     Navigator.popUntil(context, ModalRoute.withName('/'));
   }
 
